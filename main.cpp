@@ -45,7 +45,7 @@ class Node {
 void apply_manhattan(std::vector<Node*>& nodes_list);
 void apply_mispalacedTiles(std::vector<Node*>& nodes_list);
 void calculate_f_N(std::vector<Node*>& nodes_list);
-void queueing_function(std::queue<Node*>& nodes, std::vector<Node*> nodes_list, QueueFunction queue_type) {
+void queueing_function(std::queue<Node*>& nodes, std::vector<Node*>& nodes_list, QueueFunction queue_type) {
     switch (queue_type) {
         case UniformCost:
             // just adding cheapest node so no particular calculations needed
@@ -72,7 +72,7 @@ std::vector<Node*> make_node(const std::vector<std::vector<int>>& state); // Thi
 bool EMPTY(const std::queue<Node*>& nodes);
 void make_queue(std::queue<Node*>& nodes, std::vector<Node*> nodes_list, QueueFunction queue_type);
 Node* remove_front(std::queue<Node*>& nodes); // Mostly for matching with slides
-std::vector<Node*> expand(Node* node, Problem problem);
+std::vector<Node*>* expand(Node* node, Problem problem);
 bool test_insert(std::vector<Node*>& children, Problem problem, Node* node, Node* parent);
 
 Node* general_search(Problem& problem, QueueFunction queuetype) {
@@ -91,14 +91,21 @@ Node* general_search(Problem& problem, QueueFunction queuetype) {
             return node;
         };
 
-        /* nodes = */ queueing_function(nodes, expand(node, problem), queuetype);
+        /* nodes = */ queueing_function(nodes, *(expand(node, problem)), queuetype);
 
     } while (true);
 };
 
 int main() {
     Problem problem;
-    problem.initial_state = {{1, 2, 3}, {5, 6, 7}, {7, 8, 4}};
+    // problem.initial_state = {{1, 2, 3}, {4, 5, 6}, {0, 7, 8}};
+
+    std::vector<std::vector<std::vector<int>>> predefined = {
+        {{1, 2, 3}, {4, 5, 6}, {7, 8, 0}}, // Depth 0
+        {{1, 2, 3}, {4, 5, 6}, {0, 7, 8}}
+    } 
+
+    problem.initial_state = {{7, 0, 2}, {8, 5, 3}, {6, 4, 1}};
     problem.goal = {{1, 2, 3}, {4, 5, 6}, {7, 8, 0}};
 
     Node* solution = general_search(problem, A_Star_Manhattan);
@@ -143,8 +150,8 @@ Node* remove_front(std::queue<Node*>& nodes) {
     nodes.pop();
     return node;
 };
-std::vector<Node*> expand(Node* node, Problem problem) {
-    std::vector<Node*> children;
+std::vector<Node*>* expand(Node* node, Problem problem) {
+    std::vector<Node*>* children = new std::vector<Node*>();
 
     for (int i = 0; i < node->data.size(); i++) {
         for (int j = 0; j < node->data.at(i).size(); j++) {
@@ -159,7 +166,7 @@ std::vector<Node*> expand(Node* node, Problem problem) {
                     
                     // Using built-in std::swap from algorithm to swap the blank tile with the tile to the left of it
                     std::swap(left_node->data.at(i).at(j), left_node->data.at(i).at(j - 1));
-                    if (test_insert(children, problem, left_node, node)) { // Uses helper function to repeat checks
+                    if (test_insert(*(children), problem, left_node, node)) { // Uses helper function to repeat checks
                         node->left = left_node;
                     };
                 };
@@ -171,7 +178,7 @@ std::vector<Node*> expand(Node* node, Problem problem) {
 
                     // Using swap to swap blank tile with the tile to the right of it
                     std::swap(right_node->data.at(i).at(j), right_node->data.at(i).at(j + 1));
-                    if (test_insert(children, problem, right_node, node)) {
+                    if (test_insert(*(children), problem, right_node, node)) {
                         node->right = right_node;
                     };
                 };
@@ -183,7 +190,7 @@ std::vector<Node*> expand(Node* node, Problem problem) {
 
                     // Using swap to swap blank tile with the tile above it
                     std::swap(up_node->data.at(i).at(j), up_node->data.at(i - 1).at(j));
-                    if (test_insert(children, problem, up_node, node)) {
+                    if (test_insert(*(children), problem, up_node, node)) {
                         node->up = up_node;
                     };
                 };
@@ -195,7 +202,7 @@ std::vector<Node*> expand(Node* node, Problem problem) {
 
                     // Using swap to swap blank tile with the tile below it
                     std::swap(down_node->data.at(i).at(j), down_node->data.at(i + 1).at(j));
-                    if (test_insert(children, problem, down_node, node)) {
+                    if (test_insert(*(children), problem, down_node, node)) {
                         node->down = down_node;
                     };
                 };
