@@ -42,6 +42,15 @@ class Node {
         Node* down;
         Node* up;
 };
+// Interface Functions
+class Interface {
+    public:
+        void print_state(const std::vector<std::vector<int>>& state);
+        void print_solution(Node* node);
+        void print_solutionPath(Node* node);
+        void print_queue(const std::queue<Node*>& nodes);
+        QueueFunction ask_user_input(Problem& problem);
+};
 void apply_manhattan(std::vector<Node*>& nodes_list);
 void apply_mispalacedTiles(std::vector<Node*>& nodes_list);
 void calculate_f_N(std::vector<Node*>& nodes_list);
@@ -98,6 +107,7 @@ Node* general_search(Problem& problem, QueueFunction queuetype) {
 
 int main() {
     Problem problem;
+    Interface interface;
     // problem.initial_state = {{1, 2, 3}, {4, 5, 6}, {0, 7, 8}};
 
     std::vector<std::vector<std::vector<int>>> predefined = {
@@ -115,6 +125,8 @@ int main() {
     problem.goal = {{1, 2, 3}, {4, 5, 6}, {7, 8, 0}};
 
     Node* solution = general_search(problem, A_Star_Manhattan);
+
+    interface.print_solutionPath(solution);
 
     if (solution) {
         std::cout << "Solution found!" << "\n";
@@ -274,13 +286,19 @@ void calculate_f_N(std::vector<Node*>& nodes_list) { // Calculates f(n) for the 
         node->f_N = node->g_N + node->h_N;
     };
 };
-
-// Interface Functions
-class Interface {
-    public:
-        void print_state(const std::vector<std::vector<int>>& state);
-        void print_solution(Node* node);
-        void print_solutionPath(Node* node);
-        void print_queue(const std::queue<Node*>& nodes);
-        QueueFunction ask_user_input(Problem& problem);
+void Interface::print_state(const std::vector<std::vector<int>>& state) {
+    for (int i = 0; i < state.size(); i++) {
+        for (int j = 0; j < state.at(i).size(); j++) {
+            std::cout << state.at(i).at(j) << " ";
+        };
+        std::cout << "\n";
+    };
+};
+void Interface::print_solutionPath(Node* node) {
+    if (!node) {
+        return;
+    };
+    print_solutionPath(node->parent);
+    print_state(node->data);
+    std::cout << "\n=========\n";
 };
