@@ -46,9 +46,7 @@ class Node {
 class Interface {
     public:
         void print_state(const std::vector<std::vector<int>>& state);
-        void print_solution(Node* node);
         void print_solutionPath(Node* node);
-        void print_queue(const std::queue<Node*>& nodes);
         QueueFunction ask_user_input(Problem& problem);
 };
 void apply_manhattan(std::vector<Node*>& nodes_list);
@@ -81,8 +79,8 @@ std::vector<Node*> make_node(const std::vector<std::vector<int>>& state); // Thi
 bool EMPTY(const std::queue<Node*>& nodes);
 void make_queue(std::queue<Node*>& nodes, std::vector<Node*> nodes_list, QueueFunction queue_type);
 Node* remove_front(std::queue<Node*>& nodes); // Mostly for matching with slides
-std::vector<Node*>* expand(Node* node, Problem problem);
-bool test_insert(std::vector<Node*>& children, Problem problem, Node* node, Node* parent);
+std::vector<Node*>* expand(Node* node, Problem& problem);
+bool test_insert(std::vector<Node*>& children, Problem& problem, Node* node, Node* parent);
 
 Node* general_search(Problem& problem, QueueFunction queuetype) {
     std::queue<Node*> nodes;
@@ -115,18 +113,23 @@ int main() {
         {{1, 2, 3}, {4, 5, 6}, {0, 7, 8}}, // Depth 2
         {{1, 2, 3}, {5, 0, 6}, {4, 7, 8}}, // Depth 4
         {{1, 3, 6}, {5, 0, 2}, {4, 7, 8}}, // Depth 8
-        {{1, 3, 6}, {5, 0, 7}, {4, 7, 8}}, // Depth 12
+        {{1, 3, 6}, {5, 0, 7}, {4, 8, 2}}, // Depth 12
         {{1, 6, 7}, {5, 0, 3}, {4, 8, 2}}, // Depth 16
         {{7, 1, 2}, {4, 8, 5}, {6, 3, 0}}, // Depth 20
         {{0, 7, 2}, {4, 6, 1}, {3, 5, 8}} // Depth 24
     }; 
 
-    problem.initial_state = predefined.at(0);
+    problem.initial_state = predefined.at(5);
     problem.goal = {{1, 2, 3}, {4, 5, 6}, {7, 8, 0}};
 
-    Node* solution = general_search(problem, A_Star_Manhattan);
+    interface.print_state(problem.initial_state);
+
+    std::cout << "\n";
+
+    Node* solution = general_search(problem, A_Star_MispalacedTiles);
 
     interface.print_solutionPath(solution);
+    std::cout << solution->depth << "\n";
 
     if (solution) {
         std::cout << "Solution found!" << "\n";
@@ -168,7 +171,7 @@ Node* remove_front(std::queue<Node*>& nodes) {
     nodes.pop();
     return node;
 };
-std::vector<Node*>* expand(Node* node, Problem problem) {
+std::vector<Node*>* expand(Node* node, Problem& problem) {
     std::vector<Node*>* children = new std::vector<Node*>();
 
     for (int i = 0; i < node->data.size(); i++) {
@@ -269,7 +272,7 @@ void apply_mispalacedTiles(std::vector<Node*>& nodes_list) { // Applies the Misp
         node->h_N = misplaced_tiles;
     };
 };
-bool test_insert(std::vector<Node*>& children, Problem problem, Node* node, Node* parent) { // Checks if the expanded node will be a duplicate, if not then it will be expanded
+bool test_insert(std::vector<Node*>& children, Problem& problem, Node* node, Node* parent) { // Checks if the expanded node will be a duplicate, if not then it will be expanded
     if (problem.visited_states.find(node->data) != problem.visited_states.end()) {
         delete node;
         return false;
@@ -277,6 +280,7 @@ bool test_insert(std::vector<Node*>& children, Problem problem, Node* node, Node
 
     node->parent = parent;
     node->g_N = parent->g_N + 1;
+    node->depth = parent->depth + 1;
     children.push_back(node);
     problem.visited_states.insert(node->data);
     return true;
@@ -300,5 +304,5 @@ void Interface::print_solutionPath(Node* node) {
     };
     print_solutionPath(node->parent);
     print_state(node->data);
-    std::cout << "\n=========\n";
+    std::cout << "=========\n";
 };
