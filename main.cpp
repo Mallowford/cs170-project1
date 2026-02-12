@@ -119,7 +119,7 @@ int main() {
         {{0, 7, 2}, {4, 6, 1}, {3, 5, 8}} // Depth 24
     }; 
 
-    problem.initial_state = predefined.at(5);
+    problem.initial_state = predefined.at(7);
     problem.goal = {{1, 2, 3}, {4, 5, 6}, {7, 8, 0}};
 
     interface.print_state(problem.initial_state);
