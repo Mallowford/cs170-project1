@@ -53,10 +53,13 @@ class Problem {
         std::vector<std::vector<int>> initial_state;
         std::vector<std::vector<int>> goal;
         std::vector<Node*> dump;
+
+        // https://en.cppreference.com/w/cpp/container/set.html
         std::set<std::vector<std::vector<int>>> visited_states;
 
         bool goal_state(const std::vector<std::vector<int>>& state) const; // Compares given state to the goal state and returns true if they are the same, else false
 };
+// https://www.geeksforgeeks.org/cpp/custom-comparator-in-priority_queue-in-cpp-stl/
 class Compare {
     public:
         bool operator()(Node* a, Node* b) {
@@ -77,6 +80,7 @@ class Interface {
 };
 void apply_manhattan(std::vector<Node*>& nodes_list);
 void apply_mispalacedTiles(std::vector<Node*>& nodes_list);
+// Slide 3, Heuristic Search Page 38/68
 void calculate_f_N(std::vector<Node*>& nodes_list);
 void queueing_function(std::priority_queue<Node*, std::vector<Node*>, Compare>& nodes, std::vector<Node*>& nodes_list, QueueFunction queue_type) {
     switch (queue_type) {
@@ -107,6 +111,7 @@ std::vector<Node*> expand(Node* node, Problem& problem);
 void attempt_insert(std::vector<Node*>& children, Problem& problem, Node* node, Node* parent);
 
 Node* general_search(Problem& problem, QueueFunction queuetype) {
+    // https://www.geeksforgeeks.org/cpp/priority-queue-in-cpp-stl/
     std::priority_queue<Node*, std::vector<Node*>, Compare> nodes;
     /* nodes = */ make_queue(nodes, make_node(problem.initial_state), queuetype);
 
@@ -132,15 +137,15 @@ int main() {
     // Problem problem;
     Interface interface;
     // problem.initial_state = {{1, 2, 3}, {4, 5, 6}, {0, 7, 8}};
-    int totalIterations = 1;
-    double totalSeconds = 0;
+    int totalIterations = 30;
+    double totalMilliSeconds = 0;
     long long totalExpanded = 0;
     long long totalQueueSize = 0;
     int depth = 0;
     for (int heuristics = 0; heuristics < 3; heuristics++) {
         QueueFunction method = static_cast<QueueFunction>(heuristics);
         std::string name = "";
-        for (int j = 7; j < 8; j++) {
+        for (int j = 0; j < 8; j++) {
             for (int i = 0; i < totalIterations; i++) {
                 Problem problem;
 
@@ -162,7 +167,7 @@ int main() {
                 std::cout << "Depth Size: " << solution->depth << "\n";
                 */
 
-                totalSeconds += (static_cast<double>(duration.count())/1000);
+                totalMilliSeconds += static_cast<double>(duration.count());
                 totalExpanded += nodesExpanded;
                 totalQueueSize += maxQueueSize;
                 
@@ -190,10 +195,10 @@ int main() {
             };
 
             std::cout << "Method: " << name << "\n"; 
-            std::cout << "Average Runtime: " << totalSeconds/totalIterations << "\n";
+            std::cout << "Average Runtime: " << totalMilliSeconds/totalIterations << " ms\n";
             std::cout << "Average Nodes Expanded: " << totalExpanded/totalIterations << "\n";
             std::cout << "Average Max Queue Size: " << totalQueueSize/totalIterations << "\n";
-            totalSeconds = 0;
+            totalMilliSeconds = 0;
             totalExpanded = 0;
             totalQueueSize = 0;
         };
@@ -310,6 +315,7 @@ std::vector<Node*> expand(Node* node, Problem& problem) {
 };
 
 // Helper Functions
+// Slides 3, Heuristic Search Page 29/68
 void apply_manhattan(std::vector<Node*>& nodes_list) { // Applies the Manhattan distance heuristic to the nodes in the list
     for (Node* node : nodes_list) {
         int manhattan = 0;
@@ -330,6 +336,7 @@ void apply_manhattan(std::vector<Node*>& nodes_list) { // Applies the Manhattan 
         node->h_N = manhattan;
     };
 };
+// Slides 3, Heuristic Search Page 28/68
 void apply_mispalacedTiles(std::vector<Node*>& nodes_list) { // Applies the Misplaced Tiles heuristic to the nodes in the list
     for (Node* node : nodes_list) {
         int misplaced_tiles = 0;
