@@ -4,6 +4,23 @@
 #include <algorithm>
 #include <set>
 
+/* FOR GRAPH INFO ONLY */
+#include <chrono>
+int nodesExpanded = 0;
+int maxQueueSize = 0;
+
+/* PREDEFINED */
+std::vector<std::vector<std::vector<int>>> predefined = { // This list is from the lab1 report example nodes
+    {{1, 2, 3}, {4, 5, 6}, {7, 8, 0}}, // Depth 0 * this
+    {{1, 2, 3}, {4, 5, 6}, {0, 7, 8}}, // Depth 2
+    {{1, 2, 3}, {5, 0, 6}, {4, 7, 8}}, // Depth 4 * this
+    {{1, 3, 6}, {5, 0, 2}, {4, 7, 8}}, // Depth 8 * this
+    {{1, 3, 6}, {5, 0, 7}, {4, 8, 2}}, // Depth 12 * this
+    {{1, 6, 7}, {5, 0, 3}, {4, 8, 2}}, // Depth 16 * this
+    {{7, 1, 2}, {4, 8, 5}, {6, 3, 0}}, // Depth 20 * this
+    {{0, 7, 2}, {4, 6, 1}, {3, 5, 8}} // Depth 24 * this
+};
+
 // Main Definitions
 enum QueueFunction {
     UniformCost,
@@ -73,6 +90,8 @@ void queueing_function(std::queue<Node*>& nodes, std::vector<Node*>& nodes_list,
     for (Node* node : nodes_list) {
         nodes.push(node);
     };
+
+    maxQueueSize = std::max(static_cast<int>(nodes.size()), maxQueueSize);
 };
 
 std::vector<Node*> make_node(const std::vector<std::vector<int>>& state); // This is just for matching more with the slides
@@ -104,39 +123,85 @@ Node* general_search(Problem& problem, QueueFunction queuetype) {
 };
 
 int main() {
-    Problem problem;
+    // Problem problem;
     Interface interface;
     // problem.initial_state = {{1, 2, 3}, {4, 5, 6}, {0, 7, 8}};
+    int totalIterations = 30;
+    double totalSeconds = 0;
+    long long totalExpanded = 0;
+    long long totalQueueSize = 0;
+    int depth = 0;
+    for (int heuristics = 0; heuristics < 3; heuristics++) {
+        QueueFunction method = static_cast<QueueFunction>(heuristics);
+        std::string name = "";
+        for (int j = 0; j < 8; j++) {
+            for (int i = 0; i < totalIterations; i++) {
+                Problem problem;
 
-    std::vector<std::vector<std::vector<int>>> predefined = {
-        {{1, 2, 3}, {4, 5, 6}, {7, 8, 0}}, // Depth 0
-        {{1, 2, 3}, {4, 5, 6}, {0, 7, 8}}, // Depth 2
-        {{1, 2, 3}, {5, 0, 6}, {4, 7, 8}}, // Depth 4
-        {{1, 3, 6}, {5, 0, 2}, {4, 7, 8}}, // Depth 8
-        {{1, 3, 6}, {5, 0, 7}, {4, 8, 2}}, // Depth 12
-        {{1, 6, 7}, {5, 0, 3}, {4, 8, 2}}, // Depth 16
-        {{7, 1, 2}, {4, 8, 5}, {6, 3, 0}}, // Depth 20
-        {{0, 7, 2}, {4, 6, 1}, {3, 5, 8}} // Depth 24
-    }; 
+                problem.initial_state = predefined.at(j);
+                problem.goal = {{1, 2, 3}, {4, 5, 6}, {7, 8, 0}};
 
-    problem.initial_state = predefined.at(7);
-    problem.goal = {{1, 2, 3}, {4, 5, 6}, {7, 8, 0}};
+                // interface.print_state(problem.initial_state);
 
-    interface.print_state(problem.initial_state);
+                auto start = std::chrono::steady_clock::now();
+                Node* solution = general_search(problem, static_cast<QueueFunction>(heuristics));
+                auto end = std::chrono::steady_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+                
+                /*
+                std::cout << "Seconds: " << static_cast<double>(duration.count())/1000 << "\n";
+                std::cout << "Nodes Expanded: " << nodesExpanded << "\n";
+                std::cout << "Max Queue Size: " << maxQueueSize << "\n";
+                std::cout << "Depth Size: " << solution->depth << "\n";
+                */
 
-    std::cout << "\n";
+                totalSeconds += (static_cast<double>(duration.count())/1000);
+                totalExpanded += nodesExpanded;
+                totalQueueSize += maxQueueSize;
+                
 
-    Node* solution = general_search(problem, A_Star_MispalacedTiles);
+                nodesExpanded = 0;
+                maxQueueSize = 0;
+                depth = solution->depth;
+                delete solution;
+            };
+            std::cout << "======= DEPTH: " << depth << " =========\n";
+            
+            switch (method) {
+                case UniformCost:
+                    name = "UniformCost";
+                    break;
+                case A_Star_Manhattan:
+                    name = "Manhattan";
+                    break;
+                case A_Star_MispalacedTiles:
+                    name = "Misplaced";
+                    break;
+            };
 
-    interface.print_solutionPath(solution);
-    std::cout << solution->depth << "\n";
+            std::cout << "Method: " << name << "\n"; 
+            std::cout << "Average Runtime: " << totalSeconds/totalIterations << "\n";
+            std::cout << "Average Nodes Expanded: " << totalExpanded/totalIterations << "\n";
+            std::cout << "Average Max Queue Size: " << totalQueueSize/totalIterations << "\n";
+            totalSeconds = 0;
+            totalExpanded = 0;
+            totalQueueSize = 0;
+        };
 
+    };
+    
+
+
+    // interface.print_solutionPath(solution);
+
+    
+/*
     if (solution) {
         std::cout << "Solution found!" << "\n";
     } else {
         std::cout << "No solution found." << "\n";
     };
-
+*/
     return 0;
 };
 
@@ -231,6 +296,7 @@ std::vector<Node*>* expand(Node* node, Problem& problem) {
         };
     };
 
+    nodesExpanded += (*children).size();
     return children;
 };
 
@@ -239,7 +305,6 @@ void apply_manhattan(std::vector<Node*>& nodes_list) { // Applies the Manhattan 
     for (Node* node : nodes_list) {
         int manhattan = 0;
 
-        // O(n^2)
         for (int i = 0; i < node->data.size(); i++) {
             for (int j = 0; j < node->data.at(i).size(); j++) {
                 // Skip the blank tile
@@ -306,3 +371,46 @@ void Interface::print_solutionPath(Node* node) {
     print_state(node->data);
     std::cout << "=========\n";
 };
+QueueFunction Interface::ask_user_input(Problem& problem) {
+    std::cout << "Would you like to use a predefined state (Y) or use a custom state (N)? \n";
+    char input = '0';
+    int int_input = 0;
+    std::cin >> input;
+    std::cin.clear();
+    input = tolower(input);
+    if (input == 'y') {
+        std::cout << "Pick a state (0 - 7) \n";
+        std::cout << "Possible States Depths: 0, 2, 4, 8, 12, 16, 20, 24 \n";
+        std::cin >> int_input;
+        std::cin.clear();
+        problem.initial_state = predefined.at(int_input);
+    }
+    else { // Hard coding 3x3 vector for now
+        std::vector<std::vector<int>> result;
+        std::cout << "List vector in order by column then moving to row \n";
+        std::cout << "Example: 1 2 3 4 5 6 7 8 9 is: Row 1 123\n";
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                std::cin >> int_input;
+                result.at(i).at(j) = int_input;
+            };
+        };
+        std::cin.clear();
+        problem.initial_state = result;
+    };
+    std::cout << "Pick a Heuristic Type: Uniform (0/default), Manhattan (1), Misplaced Tiles(2)" << "\n";
+    std::cin >> int_input;
+    if (int_input > 2) {
+        return UniformCost;
+    };
+
+    return static_cast<QueueFunction>(int_input);
+};
+
+// int max(int a, int b) {
+//     if (a > b) {
+//         return a;
+//     };
+
+//     return b;
+// };
