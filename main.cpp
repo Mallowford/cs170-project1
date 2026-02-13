@@ -406,11 +406,3 @@ QueueFunction Interface::ask_user_input(Problem& problem) {
 
     return static_cast<QueueFunction>(int_input);
 };
-
-// int max(int a, int b) {
-//     if (a > b) {
-//         return a;
-//     };
-
-//     return b;
-// };
