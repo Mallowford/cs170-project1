@@ -27,23 +27,10 @@ enum QueueFunction {
     A_Star_Manhattan,
     A_Star_MispalacedTiles
 };
-class Problem {
-    public:
-        std::vector<std::vector<int>> initial_state;
-        std::vector<std::vector<int>> goal;
-        std::set<std::vector<std::vector<int>>> visited_states;
-
-        bool goal_state(const std::vector<std::vector<int>>& state) const; // Compares given state to the goal state and returns true if they are the same, else false
-};
 class Node {
     public:
-        Node() : parent(nullptr), g_N(0), h_N(0), f_N(0), depth(0), left(nullptr), right(nullptr), down(nullptr), up(nullptr) {};
-        ~Node() {
-            delete left;
-            delete right;
-            delete down;
-            delete up;
-        };
+        Node() : parent(nullptr), g_N(0), h_N(0), f_N(0), depth(0) {};
+        ~Node() = default;
         std::vector<std::vector<int>> data;
 
         // g(n) and h(n) for A* search
@@ -54,10 +41,32 @@ class Node {
         int depth;
 
         // Operators / States of moving the blank tile, "0"
+        /*
         Node* left;
         Node* right;
         Node* down;
         Node* up;
+        */
+};
+class Problem {
+    public:
+        std::vector<std::vector<int>> initial_state;
+        std::vector<std::vector<int>> goal;
+        std::vector<Node*> dump;
+        std::set<std::vector<std::vector<int>>> visited_states;
+
+        bool goal_state(const std::vector<std::vector<int>>& state) const; // Compares given state to the goal state and returns true if they are the same, else false
+};
+class Compare {
+    public:
+        bool operator()(Node* a, Node* b) {
+            if (a->f_N > b->f_N) {
+                return true;
+            };
+
+            return false;
+        };
+
 };
 // Interface Functions
 class Interface {
@@ -69,10 +78,9 @@ class Interface {
 void apply_manhattan(std::vector<Node*>& nodes_list);
 void apply_mispalacedTiles(std::vector<Node*>& nodes_list);
 void calculate_f_N(std::vector<Node*>& nodes_list);
-void queueing_function(std::queue<Node*>& nodes, std::vector<Node*>& nodes_list, QueueFunction queue_type) {
+void queueing_function(std::priority_queue<Node*, std::vector<Node*>, Compare>& nodes, std::vector<Node*>& nodes_list, QueueFunction queue_type) {
     switch (queue_type) {
         case UniformCost:
-            // just adding cheapest node so no particular calculations needed
             break;
         case A_Star_Manhattan:
             apply_manhattan(nodes_list);
@@ -84,9 +92,6 @@ void queueing_function(std::queue<Node*>& nodes, std::vector<Node*>& nodes_list,
             break;
     };
     calculate_f_N(nodes_list);
-    std::sort(nodes_list.begin(), nodes_list.end(), [](Node* a, Node* b) {
-        return a->f_N < b->f_N;
-    });
     for (Node* node : nodes_list) {
         nodes.push(node);
     };
@@ -95,14 +100,14 @@ void queueing_function(std::queue<Node*>& nodes, std::vector<Node*>& nodes_list,
 };
 
 std::vector<Node*> make_node(const std::vector<std::vector<int>>& state); // This is just for matching more with the slides
-bool EMPTY(const std::queue<Node*>& nodes);
-void make_queue(std::queue<Node*>& nodes, std::vector<Node*> nodes_list, QueueFunction queue_type);
-Node* remove_front(std::queue<Node*>& nodes); // Mostly for matching with slides
-std::vector<Node*>* expand(Node* node, Problem& problem);
-bool test_insert(std::vector<Node*>& children, Problem& problem, Node* node, Node* parent);
+bool EMPTY(const std::priority_queue<Node*, std::vector<Node*>, Compare>& nodes);
+void make_queue(std::priority_queue<Node*, std::vector<Node*>, Compare>& nodes, std::vector<Node*> nodes_list, QueueFunction queue_type);
+Node* remove_front(std::priority_queue<Node*, std::vector<Node*>, Compare>& nodes); // Mostly for matching with slides
+std::vector<Node*> expand(Node* node, Problem& problem);
+void attempt_insert(std::vector<Node*>& children, Problem& problem, Node* node, Node* parent);
 
 Node* general_search(Problem& problem, QueueFunction queuetype) {
-    std::queue<Node*> nodes;
+    std::priority_queue<Node*, std::vector<Node*>, Compare> nodes;
     /* nodes = */ make_queue(nodes, make_node(problem.initial_state), queuetype);
 
     // Keeps searching until a solution is found or there are no more nodes to expand
@@ -117,7 +122,8 @@ Node* general_search(Problem& problem, QueueFunction queuetype) {
             return node;
         };
 
-        /* nodes = */ queueing_function(nodes, *(expand(node, problem)), queuetype);
+        std::vector<Node*> expanded_nodes = expand(node, problem);
+        /* nodes = */ queueing_function(nodes, expanded_nodes, queuetype);
 
     } while (true);
 };
@@ -126,7 +132,7 @@ int main() {
     // Problem problem;
     Interface interface;
     // problem.initial_state = {{1, 2, 3}, {4, 5, 6}, {0, 7, 8}};
-    int totalIterations = 30;
+    int totalIterations = 1;
     double totalSeconds = 0;
     long long totalExpanded = 0;
     long long totalQueueSize = 0;
@@ -134,12 +140,13 @@ int main() {
     for (int heuristics = 0; heuristics < 3; heuristics++) {
         QueueFunction method = static_cast<QueueFunction>(heuristics);
         std::string name = "";
-        for (int j = 0; j < 8; j++) {
+        for (int j = 7; j < 8; j++) {
             for (int i = 0; i < totalIterations; i++) {
                 Problem problem;
 
                 problem.initial_state = predefined.at(j);
                 problem.goal = {{1, 2, 3}, {4, 5, 6}, {7, 8, 0}};
+                problem.visited_states.insert(problem.initial_state);
 
                 // interface.print_state(problem.initial_state);
 
@@ -163,7 +170,10 @@ int main() {
                 nodesExpanded = 0;
                 maxQueueSize = 0;
                 depth = solution->depth;
-                delete solution;
+
+                for (auto& node : problem.dump) {
+                    delete node;
+                };
             };
             std::cout << "======= DEPTH: " << depth << " =========\n";
             
@@ -202,6 +212,7 @@ int main() {
         std::cout << "No solution found." << "\n";
     };
 */
+
     return 0;
 };
 
@@ -214,8 +225,11 @@ std::vector<Node*> make_node(const std::vector<std::vector<int>>& state) {
 bool Problem::goal_state(const std::vector<std::vector<int>>& state) const {
     bool is_goal = true;
 
-    for (int i = 0; i < state.size(); i++) {
-        for (int j = 0; j < state.at(i).size(); j++) {
+    int row = state.size();
+    int col = state.at(0).size();
+
+    for (int i = 0; i < row; i++) {
+        for (int j = 0; j < col; j++) {
             if (state.at(i).at(j) != this->goal.at(i).at(j)) {
                 is_goal = false;
                 break;
@@ -225,19 +239,19 @@ bool Problem::goal_state(const std::vector<std::vector<int>>& state) const {
     
     return is_goal;
 };
-bool EMPTY(const std::queue<Node*>& nodes) {
+bool EMPTY(const std::priority_queue<Node*, std::vector<Node*>, Compare>& nodes) {
     return nodes.empty();
 };
-void make_queue(std::queue<Node*>& nodes, std::vector<Node*> nodes_list, QueueFunction queue_type) {
+void make_queue(std::priority_queue<Node*, std::vector<Node*>, Compare>& nodes, std::vector<Node*> nodes_list, QueueFunction queue_type) {
     queueing_function(nodes, nodes_list, queue_type);
 };
-Node* remove_front(std::queue<Node*>& nodes) {
-    Node* node = nodes.front();
+Node* remove_front(std::priority_queue<Node*, std::vector<Node*>, Compare>& nodes) {
+    Node* node = nodes.top();
     nodes.pop();
     return node;
 };
-std::vector<Node*>* expand(Node* node, Problem& problem) {
-    std::vector<Node*>* children = new std::vector<Node*>();
+std::vector<Node*> expand(Node* node, Problem& problem) {
+    std::vector<Node*> children;
 
     for (int i = 0; i < node->data.size(); i++) {
         for (int j = 0; j < node->data.at(i).size(); j++) {
@@ -252,9 +266,7 @@ std::vector<Node*>* expand(Node* node, Problem& problem) {
                     
                     // Using built-in std::swap from algorithm to swap the blank tile with the tile to the left of it
                     std::swap(left_node->data.at(i).at(j), left_node->data.at(i).at(j - 1));
-                    if (test_insert(*(children), problem, left_node, node)) { // Uses helper function to repeat checks
-                        node->left = left_node;
-                    };
+                    attempt_insert(children, problem, left_node, node); // Uses helper function to repeat checks
                 };
                 
                 // Move Right
@@ -264,9 +276,7 @@ std::vector<Node*>* expand(Node* node, Problem& problem) {
 
                     // Using swap to swap blank tile with the tile to the right of it
                     std::swap(right_node->data.at(i).at(j), right_node->data.at(i).at(j + 1));
-                    if (test_insert(*(children), problem, right_node, node)) {
-                        node->right = right_node;
-                    };
+                    attempt_insert(children, problem, right_node, node);
                 };
 
                 // Move Up
@@ -276,9 +286,7 @@ std::vector<Node*>* expand(Node* node, Problem& problem) {
 
                     // Using swap to swap blank tile with the tile above it
                     std::swap(up_node->data.at(i).at(j), up_node->data.at(i - 1).at(j));
-                    if (test_insert(*(children), problem, up_node, node)) {
-                        node->up = up_node;
-                    };
+                    attempt_insert(children, problem, up_node, node);
                 };
 
                 // Move Down
@@ -288,15 +296,16 @@ std::vector<Node*>* expand(Node* node, Problem& problem) {
 
                     // Using swap to swap blank tile with the tile below it
                     std::swap(down_node->data.at(i).at(j), down_node->data.at(i + 1).at(j));
-                    if (test_insert(*(children), problem, down_node, node)) {
-                        node->down = down_node;
-                    };
+                    attempt_insert(children, problem, down_node, node);
                 };
             };
         };
     };
 
-    nodesExpanded += (*children).size();
+    nodesExpanded += children.size();
+    for (Node* i : children) {
+        problem.dump.push_back(i);
+    };
     return children;
 };
 
@@ -337,10 +346,10 @@ void apply_mispalacedTiles(std::vector<Node*>& nodes_list) { // Applies the Misp
         node->h_N = misplaced_tiles;
     };
 };
-bool test_insert(std::vector<Node*>& children, Problem& problem, Node* node, Node* parent) { // Checks if the expanded node will be a duplicate, if not then it will be expanded
-    if (problem.visited_states.find(node->data) != problem.visited_states.end()) {
+void attempt_insert(std::vector<Node*>& children, Problem& problem, Node* node, Node* parent) { // Checks if the expanded node will be a duplicate, if not then it will be expanded
+    if (problem.visited_states.count(node->data)) {
         delete node;
-        return false;
+        return;
     };
 
     node->parent = parent;
@@ -348,7 +357,6 @@ bool test_insert(std::vector<Node*>& children, Problem& problem, Node* node, Nod
     node->depth = parent->depth + 1;
     children.push_back(node);
     problem.visited_states.insert(node->data);
-    return true;
 };
 void calculate_f_N(std::vector<Node*>& nodes_list) { // Calculates f(n) for the nodes in the list
     for (Node* node : nodes_list) {
