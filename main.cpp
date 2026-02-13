@@ -63,11 +63,12 @@ class Problem {
 class Compare {
     public:
         bool operator()(Node* a, Node* b) {
-            if (a->f_N > b->f_N) {
-                return true;
+            if (a->f_N != b->f_N) {
+                return a->f_N > b->f_N;
+            }
+            else {
+                return a->g_N > b->g_N;
             };
-
-            return false;
         };
 
 };
@@ -109,6 +110,7 @@ void make_queue(std::priority_queue<Node*, std::vector<Node*>, Compare>& nodes, 
 Node* remove_front(std::priority_queue<Node*, std::vector<Node*>, Compare>& nodes); // Mostly for matching with slides
 std::vector<Node*> expand(Node* node, Problem& problem);
 void attempt_insert(std::vector<Node*>& children, Problem& problem, Node* node, Node* parent);
+void dataCollection();
 
 Node* general_search(Problem& problem, QueueFunction queuetype) {
     // https://www.geeksforgeeks.org/cpp/priority-queue-in-cpp-stl/
@@ -134,89 +136,26 @@ Node* general_search(Problem& problem, QueueFunction queuetype) {
 };
 
 int main() {
-    // Problem problem;
+    Problem problem;
     Interface interface;
-    // problem.initial_state = {{1, 2, 3}, {4, 5, 6}, {0, 7, 8}};
-    int totalIterations = 30;
-    double totalMilliSeconds = 0;
-    long long totalExpanded = 0;
-    long long totalQueueSize = 0;
-    int depth = 0;
-    for (int heuristics = 0; heuristics < 3; heuristics++) {
-        QueueFunction method = static_cast<QueueFunction>(heuristics);
-        std::string name = "";
-        for (int j = 0; j < 8; j++) {
-            for (int i = 0; i < totalIterations; i++) {
-                Problem problem;
+    problem.goal = {{1, 2, 3}, {4, 5, 6}, {7, 8, 0}};
+    QueueFunction heuristic = interface.ask_user_input(problem);
 
-                problem.initial_state = predefined.at(j);
-                problem.goal = {{1, 2, 3}, {4, 5, 6}, {7, 8, 0}};
-                problem.visited_states.insert(problem.initial_state);
+    Node* solution = general_search(problem, heuristic);
+    std::cout << solution->depth << "\n";
 
-                // interface.print_state(problem.initial_state);
-
-                auto start = std::chrono::steady_clock::now();
-                Node* solution = general_search(problem, static_cast<QueueFunction>(heuristics));
-                auto end = std::chrono::steady_clock::now();
-                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-                
-                /*
-                std::cout << "Seconds: " << static_cast<double>(duration.count())/1000 << "\n";
-                std::cout << "Nodes Expanded: " << nodesExpanded << "\n";
-                std::cout << "Max Queue Size: " << maxQueueSize << "\n";
-                std::cout << "Depth Size: " << solution->depth << "\n";
-                */
-
-                totalMilliSeconds += static_cast<double>(duration.count());
-                totalExpanded += nodesExpanded;
-                totalQueueSize += maxQueueSize;
-                
-
-                nodesExpanded = 0;
-                maxQueueSize = 0;
-                depth = solution->depth;
-
-                for (auto& node : problem.dump) {
-                    delete node;
-                };
-            };
-            std::cout << "======= DEPTH: " << depth << " =========\n";
-            
-            switch (method) {
-                case UniformCost:
-                    name = "UniformCost";
-                    break;
-                case A_Star_Manhattan:
-                    name = "Manhattan";
-                    break;
-                case A_Star_MispalacedTiles:
-                    name = "Misplaced";
-                    break;
-            };
-
-            std::cout << "Method: " << name << "\n"; 
-            std::cout << "Average Runtime: " << totalMilliSeconds/totalIterations << " ms\n";
-            std::cout << "Average Nodes Expanded: " << totalExpanded/totalIterations << "\n";
-            std::cout << "Average Max Queue Size: " << totalQueueSize/totalIterations << "\n";
-            totalMilliSeconds = 0;
-            totalExpanded = 0;
-            totalQueueSize = 0;
-        };
-
-    };
-    
-
-
-    // interface.print_solutionPath(solution);
-
-    
-/*
     if (solution) {
         std::cout << "Solution found!" << "\n";
+        interface.print_solutionPath(solution);
     } else {
         std::cout << "No solution found." << "\n";
     };
-*/
+
+    for (auto& node : problem.dump) {
+        delete node;
+    };
+
+    // dataCollection();
 
     return 0;
 };
@@ -230,11 +169,8 @@ std::vector<Node*> make_node(const std::vector<std::vector<int>>& state) {
 bool Problem::goal_state(const std::vector<std::vector<int>>& state) const {
     bool is_goal = true;
 
-    int row = state.size();
-    int col = state.at(0).size();
-
-    for (int i = 0; i < row; i++) {
-        for (int j = 0; j < col; j++) {
+    for (int i = 0; i < state.size(); i++) {
+        for (int j = 0; j < state.at(i).size(); j++) {
             if (state.at(i).at(j) != this->goal.at(i).at(j)) {
                 is_goal = false;
                 break;
@@ -405,9 +341,11 @@ QueueFunction Interface::ask_user_input(Problem& problem) {
         std::cout << "List vector in order by column then moving to row \n";
         std::cout << "Example: 1 2 3 4 5 6 7 8 9 is: Row 1 123\n";
         for (int i = 0; i < 3; i++) {
+            result.push_back({});
             for (int j = 0; j < 3; j++) {
                 std::cin >> int_input;
-                result.at(i).at(j) = int_input;
+                std::cin.clear();
+                result.at(i).push_back(int_input);
             };
         };
         std::cin.clear();
@@ -415,9 +353,79 @@ QueueFunction Interface::ask_user_input(Problem& problem) {
     };
     std::cout << "Pick a Heuristic Type: Uniform (0/default), Manhattan (1), Misplaced Tiles(2)" << "\n";
     std::cin >> int_input;
-    if (int_input > 2) {
-        return UniformCost;
+    switch (int_input) {
+        case 1:
+            return A_Star_Manhattan;
+        case 2:
+            return A_Star_MispalacedTiles;
+        default:
+            return UniformCost;
     };
+};
 
-    return static_cast<QueueFunction>(int_input);
+void dataCollection() {
+    int totalIterations = 30;
+    double totalMilliSeconds = 0;
+    long long totalExpanded = 0;
+    long long totalQueueSize = 0;
+    int depth = 0;
+    for (int heuristics = 0; heuristics < 3; heuristics++) {
+        QueueFunction method = static_cast<QueueFunction>(heuristics);
+        std::string name = "";
+        for (int j = 0; j < 8; j++) {
+            for (int i = 0; i < totalIterations; i++) {
+                Problem problem;
+
+                problem.initial_state = predefined.at(j);
+                problem.goal = {{1, 2, 3}, {4, 5, 6}, {7, 8, 0}};
+                problem.visited_states.insert(problem.initial_state);
+
+                // interface.print_state(problem.initial_state);
+
+                auto start = std::chrono::steady_clock::now();
+                Node* solution = general_search(problem, static_cast<QueueFunction>(heuristics));
+                auto end = std::chrono::steady_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+                                
+                // std::cout << "Seconds: " << static_cast<double>(duration.count())/1000 << "\n";
+                // std::cout << "Nodes Expanded: " << nodesExpanded << "\n";
+                // std::cout << "Max Queue Size: " << maxQueueSize << "\n";
+                // std::cout << "Depth Size: " << solution->depth << "\n";
+                
+
+                totalMilliSeconds += static_cast<double>(duration.count());
+                totalExpanded += nodesExpanded;
+                totalQueueSize += maxQueueSize;
+                
+
+                nodesExpanded = 0;
+                maxQueueSize = 0;
+                depth = solution->depth;
+
+                for (auto& node : problem.dump) {
+                    delete node;
+                };
+            };
+            std::cout << "======= DEPTH: " << depth << " =========\n";
+            
+            switch (method) {
+                case UniformCost:
+                    name = "UniformCost";
+                    break;
+                case A_Star_Manhattan:
+                    name = "Manhattan";
+                    break;
+                case A_Star_MispalacedTiles:
+                    name = "Misplaced";
+                    break;
+            };
+            std::cout << "Method: " << name << "\n"; 
+            std::cout << "Average Runtime: " << totalMilliSeconds/totalIterations << " ms\n";
+            std::cout << "Average Nodes Expanded: " << totalExpanded/totalIterations << "\n";
+            std::cout << "Average Max Queue Size: " << totalQueueSize/totalIterations << "\n";
+            totalMilliSeconds = 0;
+            totalExpanded = 0;
+            totalQueueSize = 0;
+        };
+    };
 };
