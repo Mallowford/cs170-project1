@@ -142,7 +142,6 @@ int main() {
     QueueFunction heuristic = interface.ask_user_input(problem);
 
     Node* solution = general_search(problem, heuristic);
-    std::cout << solution->depth << "\n";
 
     if (solution) {
         std::cout << "Solution found!" << "\n";
