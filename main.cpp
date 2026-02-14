@@ -147,6 +147,9 @@ int main() {
     if (solution) {
         std::cout << "Solution found!" << "\n";
         interface.print_solutionPath(solution);
+        std::cout << "Depth: " << solution->depth << "\n";
+        std::cout << "Number of Nodes Expanded:" << nodesExpanded << "\n";
+        std::cout << "Max Queue Size: " << maxQueueSize << "\n";
     } else {
         std::cout << "No solution found." << "\n";
     };
@@ -308,10 +311,11 @@ void calculate_f_N(std::vector<Node*>& nodes_list) { // Calculates f(n) for the 
 };
 void Interface::print_state(const std::vector<std::vector<int>>& state) {
     for (int i = 0; i < state.size(); i++) {
+      std::cout << "[ ";
         for (int j = 0; j < state.at(i).size(); j++) {
             std::cout << state.at(i).at(j) << " ";
         };
-        std::cout << "\n";
+        std::cout << "]\n";
     };
 };
 void Interface::print_solutionPath(Node* node) {
