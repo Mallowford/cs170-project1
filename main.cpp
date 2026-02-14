@@ -153,7 +153,7 @@ int main() {
         std::cout << "Solution found!" << "\n";
         interface.print_solutionPath(solution);
         std::cout << "Depth: " << solution->depth << "\n";
-        std::cout << "Number of Nodes Expanded:" << nodesExpanded << "\n";
+        std::cout << "Number of Nodes Expanded: " << nodesExpanded << "\n";
         std::cout << "Max Queue Size: " << maxQueueSize << "\n";
     } else {
         std::cout << "No solution found." << "\n";
