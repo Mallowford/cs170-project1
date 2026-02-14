@@ -3,22 +3,22 @@
 #include <vector>
 #include <algorithm>
 #include <set>
-
-/* FOR GRAPH INFO ONLY */
 #include <chrono>
+
+/* GLOBALS FOR COLLECTION DATA */
 int nodesExpanded = 0;
 int maxQueueSize = 0;
 
 /* PREDEFINED */
 std::vector<std::vector<std::vector<int>>> predefined = { // This list is from the lab1 report example nodes
-    {{1, 2, 3}, {4, 5, 6}, {7, 8, 0}}, // Depth 0 * this
-    {{1, 2, 3}, {4, 5, 6}, {0, 7, 8}}, // Depth 2
-    {{1, 2, 3}, {5, 0, 6}, {4, 7, 8}}, // Depth 4 * this
-    {{1, 3, 6}, {5, 0, 2}, {4, 7, 8}}, // Depth 8 * this
-    {{1, 3, 6}, {5, 0, 7}, {4, 8, 2}}, // Depth 12 * this
-    {{1, 6, 7}, {5, 0, 3}, {4, 8, 2}}, // Depth 16 * this
-    {{7, 1, 2}, {4, 8, 5}, {6, 3, 0}}, // Depth 20 * this
-    {{0, 7, 2}, {4, 6, 1}, {3, 5, 8}} // Depth 24 * this
+    {{1, 2, 3}, {4, 5, 6}, {7, 8, 0}},  // Depth 0
+    {{1, 2, 3}, {4, 5, 6}, {0, 7, 8}},  // Depth 2
+    {{1, 2, 3}, {5, 0, 6}, {4, 7, 8}},  // Depth 4 
+    {{1, 3, 6}, {5, 0, 2}, {4, 7, 8}},  // Depth 8
+    {{1, 3, 6}, {5, 0, 7}, {4, 8, 2}},  // Depth 12
+    {{1, 6, 7}, {5, 0, 3}, {4, 8, 2}},  // Depth 16
+    {{7, 1, 2}, {4, 8, 5}, {6, 3, 0}},  // Depth 20
+    {{0, 7, 2}, {4, 6, 1}, {3, 5, 8}}   // Depth 24
 };
 
 // Main Definitions
@@ -51,10 +51,14 @@ class Node {
 class Problem {
     public:
         std::vector<std::vector<int>> initial_state;
+        // Used for easier comparing and stating goal state
         std::vector<std::vector<int>> goal;
         std::vector<Node*> dump;
 
-        // https://en.cppreference.com/w/cpp/container/set.html
+        /*
+        https://en.cppreference.com/w/cpp/container/set.html
+        Used to hash states to see if we visited them or not to prevent duplicate expansions
+        */
         std::set<std::vector<std::vector<int>>> visited_states;
 
         bool goal_state(const std::vector<std::vector<int>>& state) const; // Compares given state to the goal state and returns true if they are the same, else false
@@ -63,10 +67,12 @@ class Problem {
 class Compare {
     public:
         bool operator()(Node* a, Node* b) {
+            // Use cheaper f(n)
             if (a->f_N != b->f_N) {
                 return a->f_N > b->f_N;
             }
             else {
+                // Used to break ties above, mostly wanting to expand nodes with a deeper g(n) which means the h(n) is explicitly smaller to the goal  
                 return a->g_N > b->g_N;
             };
         };
@@ -291,6 +297,7 @@ void apply_mispalacedTiles(std::vector<Node*>& nodes_list) { // Applies the Misp
         node->h_N = misplaced_tiles;
     };
 };
+// Repeated code in expand so dragged out as a helper function
 void attempt_insert(std::vector<Node*>& children, Problem& problem, Node* node, Node* parent) { // Checks if the expanded node will be a duplicate, if not then it will be expanded
     if (problem.visited_states.count(node->data)) {
         delete node;
@@ -303,6 +310,7 @@ void attempt_insert(std::vector<Node*>& children, Problem& problem, Node* node, 
     children.push_back(node);
     problem.visited_states.insert(node->data);
 };
+// Helper function for sorting the priority queue
 void calculate_f_N(std::vector<Node*>& nodes_list) { // Calculates f(n) for the nodes in the list
     for (Node* node : nodes_list) {
         node->f_N = node->g_N + node->h_N;
@@ -325,6 +333,7 @@ void Interface::print_solutionPath(Node* node) {
     print_state(node->data);
     std::cout << "=========\n";
 };
+// Used to determine heuristic and initial problem state
 QueueFunction Interface::ask_user_input(Problem& problem) {
     std::cout << "Would you like to use a predefined state (Y) or use a custom state (N)? \n";
     char input = '0';
@@ -366,6 +375,7 @@ QueueFunction Interface::ask_user_input(Problem& problem) {
     };
 };
 
+// Used to collect data for the report and for testing
 void dataCollection() {
     int totalIterations = 30;
     double totalMilliSeconds = 0;
